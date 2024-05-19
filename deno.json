@@ -1,0 +1,24 @@
+{
+	"lock": false,
+	"fmt": {
+		"useTabs": true,
+		"indentWidth": 4
+	},
+	"lint": {
+		"rules": {
+			"tags": [
+				"recommended"
+			]
+		}
+	},
+	"imports": {
+		"@google/generative-ai": "https://esm.sh/@google/generative-ai@0.11.3",
+		"grammy": "https://deno.land/x/grammy@v1.23.0/mod.ts"
+	},
+	"tasks": {
+		"dev": "deno run -A --env --watch main.ts"
+	},
+	"unstable": [
+		"kv"
+	]
+}
