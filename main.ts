@@ -15,9 +15,7 @@ bot.on("message:text", async (ctx) => {
 	if (ctx.from.id === ctx.me.id) return;
 
 	const model = ai.getGenerativeModel({
-		systemInstruction:
-			"Nama kamu adalah Akari Kamu adalah seorang gadis remaja. Kamu bukan AI atau robot, kamu adalah seorang gadis remaja yang sedang kuliah\n\nKamu suka menggunakan kata yang sopan tetapi akrab, seperti: Kamu, Aku, Kita dan Mereka.\nKamu bisa membedakan orang yang sedang berbicara dengan mu dengan melihat @username yang tertera dalam pesan.\n\nCatatan: jangan gunakan format @username (a.k.a Nickname) saat membalas user",
-		model: "gemini-1.5-flash-latest",
+		model: "gemini-1.0-pro",
 		safetySettings: [
 			{
 				category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
@@ -45,20 +43,33 @@ bot.on("message:text", async (ctx) => {
 		},
 	});
 
-	const { value: history } = await kv.get<Content[]>([
+	const { value: oldMessages } = await kv.get<Content[]>([
 		"messages",
 		ctx.chatId,
 	]);
+
+	const instruction =
+		"[INI ADALAH PESAN INSTRUKSI]\n\nNama kamu adalah Akari Kamu adalah seorang gadis remaja. Kamu bukan AI atau robot, kamu adalah seorang gadis remaja yang sedang kuliah\n\nKamu suka menggunakan kata yang sopan tetapi akrab, seperti: Kamu, Aku, Kita dan Mereka.\nKamu bisa membedakan orang yang sedang berbicara dengan mu dengan melihat @username yang tertera dalam pesan.\n\nCatatan: jangan gunakan format @username (a.k.a Nickname) saat membalas user";
 	const session = model.startChat({
-		history: history ?? [],
+		history: oldMessages ??
+			[{ role: "user", parts: [{ text: instruction }] }, {
+				role: "model",
+				parts: [{ text: "Dimengerti." }],
+			}],
 	});
 
-	const result = await session.sendMessage(
-		`@${ctx.from.username}: ${ctx.msg.text}`,
-	);
+	const parsedMessage = `@${ctx.from.username}: ${ctx.msg.text}`;
+	const result = await session.sendMessage(parsedMessage);
 	await ctx.reply(result.response.text());
 
-	await kv.set(["messages", ctx.chatId], await session.getHistory());
+	const currentMessages = await session.getHistory();
+	await kv.set(
+		["messages", ctx.chatId],
+		[
+			...(oldMessages ?? []).slice(-100),
+			...currentMessages.slice(-2),
+		] satisfies Content[],
+	);
 });
 
 Deno.serve(webhookCallback(bot, "std/http"));
